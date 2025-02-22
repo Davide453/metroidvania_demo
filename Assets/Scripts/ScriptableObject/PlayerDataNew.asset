@@ -13,5 +13,7 @@ MonoBehaviour:
   m_Name: PlayerDataNew
   m_EditorClassIdentifier: 
   speed: 15
-  jumpForce: 15
-  coyoteTime: 0.5
+  jumpForce: 20
+  wallJumpForce: {x: 1, y: 10}
+  jumpInputBufferTime: 0.119
+  coyoteTime: 0.143
