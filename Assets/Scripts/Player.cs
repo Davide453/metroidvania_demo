@@ -1,214 +1,177 @@
-using System;
+using System.Runtime.Serialization;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.UI;
 
 public class Player : MonoBehaviour
 {
 
-    [SerializeField] private PlayerDataNew Data;
-    //[SerializeField] private int moveSpeed = 150;
-    //[SerializeField] private GameInput input;
-    private Rigidbody2D rb;
-    public InputActionReference fire;
-    private RaycastHit2D hit;
-    private bool isGrounded;
+    public PlayerDataNew Data;
+    private float horizontalMovement;
     private float verticalMovement;
-    private bool jumpButtonPressed = false;
-    [Header("Layers")]
-    [SerializeField] private LayerMask groundLayer;
-    [Header("Checks")]
-    [SerializeField] private Transform groundCheck;
-    [SerializeField] private Transform leftWallCheck;
-    [SerializeField] private Transform rightWallCheck;
-    [SerializeField] private float checkRadius;
-    private Vector2 _moveInput;
-    private bool IsJumping;
-    private bool IsWallJumping;
-    private float LastOnGroundTime;
-    private float LastPressedJumpTime;
-    private float LastOnWallTime;
-    private float LastOnWallRightTime;
-    private float LastOnWallLeftTime;
-    private int _lastWallJumpDir;
-    private float speed;
+    bool isFacingRIght = true;
 
-    //----
-    private bool isFacingRight;
+    #region Variables
+    //Components
+    public Rigidbody2D rb;
+    [Header("Jumps")]
+    public int maxJumps = 2;
+    private int jumpsRemaining;
+    private bool isGrounded;
+    [Header("Gravity")]
+    public float baseGravity = 3.5f;
+    public float maxFallSpeed = 18f;
+    public float fallSpeedMultiplayer = 2f;
 
-    //RaycastHit2D isGrounded;
+    [Header("GroundChecks")]
+    public Transform groundCheckPos;
+    public Vector2 groundCheckSize;
+    public LayerMask groundLayer;
+    [Header("WallChecks")]
+    public Transform wallCheckPos;
+    public Vector2 wallCheckSize;
+    public LayerMask wallLayer;
+
+    [Header("WallMovement")]
+    public float wallSlideSpeed = 2;
+    bool isWallSliding;
+    private bool isWallJumping;
+    float wallJumpDirection;
+    public float wallJumpTime =0.5f;
+    float wallJumpTimer;
+    public Vector2 wallJumpPower = new Vector2(5f, 15f);
+
+    #endregion
+
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
     }
-    private void FixedUpdate()
-    {
-        _moveInput.y = rb.linearVelocity.y;
 
-        if (CanJump() && LastPressedJumpTime > 0)
-        {
-
-
-            ActualJump();
-        }
-        else if (CanWallJump() && LastPressedJumpTime > 0
-)
-        {
-            Debug.Log("---------------------------------------------");
-            IsWallJumping = true;
-            IsJumping = false;
-            _lastWallJumpDir = (LastOnWallRightTime > 0) ? -1 : 1;
-            WallJump(_lastWallJumpDir);
-        }
-
-
-        Run();
-
-
-    }
     private void Update()
     {
-        LastOnGroundTime -= Time.deltaTime;
-        LastOnWallLeftTime -= Time.deltaTime;
-        LastOnWallRightTime -= Time.deltaTime;
-        LastPressedJumpTime -= Time.deltaTime;
-        if (!IsJumping)
+        GroundCheck();
+        Gravity();
+        ProcessWallSlide();
+        ProcessWallJump();
+        if (!isWallJumping)
         {
-            //Ground Check
-            if (Physics2D.OverlapBox(groundCheck.position, Vector2.down, 0, groundLayer) && !IsJumping) //checks if set box overlaps with ground
-            {
-                LastOnGroundTime = Data.coyoteTime; //if so sets the lastGrounded to coyoteTime
-            }
-            if (Physics2D.Raycast(transform.position, Vector2.right, 0.6f, groundLayer).collider != null)
-            {
-                LastOnWallRightTime = Data.coyoteTime;
-            }
-            RaycastHit2D hit = Physics2D.Raycast(transform.position, Vector2.left, 0.6f, groundLayer);
-            if (hit.collider != null)
-            {
-                LastOnWallLeftTime = Data.coyoteTime;
-            }
-            LastOnWallTime = Mathf.Max(LastOnWallLeftTime, LastOnWallRightTime);
+            rb.linearVelocity = new Vector2(horizontalMovement * Data.speed, rb.linearVelocityY);
+            Flip();
         }
-        if (IsJumping && rb.linearVelocityY < 0)
-        {
-            IsJumping = false;
-        }
-        if (IsWallJumping)
-        {
-            IsWallJumping = false;
-        }
-
-
     }
     public void Move(InputAction.CallbackContext context)
     {
-        _moveInput.x = context.ReadValue<Vector2>().x;
+        horizontalMovement = context.ReadValue<Vector2>().x;
     }
     public void Jump(InputAction.CallbackContext context)
     {
-        if (LastOnGroundTime > 0)
+        if (jumpsRemaining > 0 && !isWallSliding)
         {
-            jumpButtonPressed = true;
+            if (context.performed)
+            {
+                rb.linearVelocity = new Vector2(rb.linearVelocityX, Data.jumpForce);
+                jumpsRemaining--;
+            }
+            else if (context.canceled)
+            {
+                rb.linearVelocity = new Vector2(rb.linearVelocityX, rb.linearVelocityY * 0.1f);
+                jumpsRemaining--;
+            }
         }
-        LastPressedJumpTime = Data.jumpInputBufferTime;
-    }
-    private void ActualJump()
-    {
-        IsJumping = true;
-        IsWallJumping = false;
-
-        LastOnGroundTime = 0;
-        LastPressedJumpTime = 0;
-
-        _moveInput.y = Data.jumpForce;
-        jumpButtonPressed = false;
-    }
-    private void WallJump(int dir)
-    {
-        //Ensures we can't call Wall Jump multiple times from one press
-        jumpButtonPressed = false;
-        IsJumping = false;
-        IsWallJumping = true;
-        LastPressedJumpTime = 0;
-
-        LastOnGroundTime = 0;
-        LastOnWallRightTime = 0;
-        LastOnWallLeftTime = 0;
-        #region Perform Wall Jump
-        /* Vector2 force = new Vector2(Data.wallJumpForce.x, );
-
-         force.x *= dir; //apply force in opposite direction of wall
-
-         if (Mathf.Sign(rb.linearVelocityX) != Mathf.Sign(force.x))
-             force.x -= rb.linearVelocityX;
-
- */
-        //Unlike in the run we want to use the Impulse mode.
-        //The default mode will apply are force instantly ignoring masss
-        float y = Data.wallJumpForce.y;
-        if (rb.linearVelocityY < 0) //checks whether player is falling, if so we subtract the velocity.y (counteracting force of gravity). This ensures the player always reaches our desired jump force or greater
-            y -= rb.linearVelocityY;
-        _moveInput.x = _moveInput.x * 1.5f * dir;
-        _moveInput.y = y;
-        Debug.Log(_moveInput + " " + dir);
-        #endregion
-    }
-    private void Run()
-    {
-        speed = 1;
-        if (!IsWallJumping && !IsJumping)
+         if (context.performed && wallJumpTimer > 0f)
         {
-            speed = Data.speed;
-
+            jumpsRemaining = 1;
+            isWallJumping = true;
+            rb.linearVelocity = new Vector2(wallJumpDirection * wallJumpPower.x, wallJumpPower.y);
+            wallJumpTimer = 0;
+            Invoke(nameof(CancelWallJump), wallJumpTime + 0.1f);
+            //force a flip 
+            if (transform.localScale.x != wallJumpDirection)
+            {
+                isFacingRIght = !isFacingRIght;
+                Vector3 ls = transform.localScale;
+                ls.x *= -1f;
+                transform.localScale = ls;
+            }
         }
-        rb.linearVelocity = new Vector2(_moveInput.x * Data.speed, _moveInput.y);
     }
-
-
-    private bool CanJump()
+    private void GroundCheck()
     {
-        return LastOnGroundTime > 0 && !IsJumping;
+        if (Physics2D.OverlapBox(groundCheckPos.position, groundCheckSize, 0, groundLayer))
+        {
+            jumpsRemaining = maxJumps;
+            isGrounded = true;
+        }
+        else
+        { isGrounded = false; }
     }
-    private bool CanWallJump()
+    private bool WallCheck()
     {
-        /*  LastPressedJumpTime > 0 && LastOnWallTime > 0 && LastOnGroundTime <= 0 && 
-        (!IsWallJumping ||	 (LastOnWallRightTime > 0 && _lastWallJumpDir == 1) || (LastOnWallLeftTime > 0 && _lastWallJumpDir == -1));
-        */
-        /*  Debug.Log($"LastPressedJumpTime: {LastPressedJumpTime}, " +
-                   $"LastOnWallTime: {LastOnWallTime}, " +
-                   $"LastOnGroundTime: {LastOnGroundTime}, " +
-                   $"IsWallJumping: {IsWallJumping}, " +
-                   $"LastOnWallRightTime: {LastOnWallRightTime}, " +
-                   $"LastOnWallLeftTime: {LastOnWallLeftTime}, " +
-                   $"_lastWallJumpDir: {_lastWallJumpDir}, "
-                                                                */
+        return Physics2D.OverlapBox(wallCheckPos.position, wallCheckSize, 0, groundLayer);
 
-        return LastPressedJumpTime > 0 && LastOnWallTime > 0 && LastOnGroundTime <= 0 && (!IsWallJumping ||
-             (LastOnWallRightTime > 0 && _lastWallJumpDir == 1) || (LastOnWallLeftTime > 0 && _lastWallJumpDir == -1));
-        // return LastOnGroundTime <= 0 && !IsWallJumping && LastOnWallTime > 0;
+
     }
-
-    /*  private void OnEnable()
-      {
-          fire.action.started += Fire;
-      }*/
-
-    private void Fire(InputAction.CallbackContext context)
+    private void ProcessWallSlide()
     {
-        Debug.Log("Fired");
+        //not on the ground ON the wall &  movement !=0
+        if (!isGrounded && WallCheck() && horizontalMovement != 0)
+        {
+
+            isWallSliding = true;
+            rb.linearVelocity = new Vector2(rb.linearVelocityX, Mathf.Max(rb.linearVelocityY, -wallSlideSpeed));
+        }
+        else
+        {
+            isWallSliding = false;
+        }
+    }
+    private void ProcessWallJump()
+    {
+        if (isWallSliding)
+        {
+            isWallJumping = false;
+            wallJumpDirection = -transform.localScale.x;
+            wallJumpTimer = wallJumpTime;
+
+            CancelInvoke(nameof(CancelWallJump));
+        }
+        else if (wallJumpTimer > 0)
+        {
+            wallJumpTimer -= Time.deltaTime;
+        }
+    }
+    private void CancelWallJump()
+    {
+        isWallJumping = false;
+    }
+    private void Gravity()
+    {
+        if (rb.linearVelocityY < 0)
+        {
+            rb.gravityScale = baseGravity * fallSpeedMultiplayer;
+            rb.linearVelocity = new Vector2(rb.linearVelocityX, Mathf.Max(rb.linearVelocityY, -maxFallSpeed));
+        }
+        else
+        {
+
+            rb.gravityScale = baseGravity;
+        }
     }
     private void Flip()
     {
-        if (isFacingRight && _moveInput.x < 0 || isFacingRight && _moveInput.x > 0)
+        if (isFacingRIght && horizontalMovement < 0 || !isFacingRIght && horizontalMovement > 0)
         {
-            isFacingRight = !isFacingRight;
+            isFacingRIght = !isFacingRIght;
+            Vector3 ls = transform.localScale;
+            ls.x *= -1f;
+            transform.localScale = ls;
+
         }
     }
- /*   void OnDrawGizmos()
+    private void OnDrawGizmos()
     {
-        // Draw a green box at the transform's position
-        Gizmos.color = Color.green;
-        Gizmos.DrawCube(transform.position, new Vector3(1, 1, 1));
-    }*/
+        Gizmos.color = Color.blue;
+        Gizmos.DrawWireCube(groundCheckPos.position, groundCheckSize); Gizmos.color = Color.blue;
+        Gizmos.DrawWireCube(wallCheckPos.position, wallCheckSize);
+    }
 }
