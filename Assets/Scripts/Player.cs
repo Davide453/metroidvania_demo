@@ -4,7 +4,7 @@ using UnityEngine.InputSystem;
 
 public class Player : MonoBehaviour
 {
-
+    public Animator animator;
     public PlayerDataNew Data;
     private float horizontalMovement;
     private float verticalMovement;
@@ -36,10 +36,15 @@ public class Player : MonoBehaviour
     bool isWallSliding;
     private bool isWallJumping;
     float wallJumpDirection;
-    public float wallJumpTime =0.5f;
+    public float wallJumpTime = 0.5f;
     float wallJumpTimer;
     public Vector2 wallJumpPower = new Vector2(5f, 15f);
-
+    [Header("Attacks")]
+    public float damage = 1;
+    private bool isAttacking;
+    public GameObject attackZone;
+    public float attackZoneSize = 0.5f;
+    public LayerMask enemyLayer;
     #endregion
 
     private void Awake()
@@ -58,10 +63,42 @@ public class Player : MonoBehaviour
             rb.linearVelocity = new Vector2(horizontalMovement * Data.speed, rb.linearVelocityY);
             Flip();
         }
+        animator.SetFloat("yVelocity", rb.linearVelocityY);
+        animator.SetFloat("magnitude", rb.linearVelocity.magnitude);
+        animator.SetBool("isWallSliding", isWallSliding);
+
     }
     public void Move(InputAction.CallbackContext context)
     {
         horizontalMovement = context.ReadValue<Vector2>().x;
+    }
+    public void Attack(InputAction.CallbackContext context)
+    {
+        if (!isAttacking)
+        {
+            isAttacking = true;
+            animator.SetBool("isAttacking", isAttacking);
+            attackZone.SetActive(true);
+
+            Collider2D[] hits = Physics2D.OverlapCircleAll(attackZone.transform.position, attackZoneSize, enemyLayer);
+            Debug.Log(hits.ToString());
+
+            foreach (Collider2D hit in hits)
+            {
+                hit.GetComponent<IDamageable>().Damage(damage);
+
+            }
+            //Vector2 knockbackDirection = (hits[0].transform.position - transform.position).normalized;
+            Vector2 knockbackDirection = new Vector2(horizontalMovement * -1 * 1000000f * Time.deltaTime, 0);
+            rb.AddForce(knockbackDirection, ForceMode2D.Impulse);
+        }
+    }
+    public void CancelAttack()
+    {
+        isAttacking = false;
+        animator.SetBool("isAttacking", isAttacking);
+        attackZone.SetActive(false);
+
     }
     public void Jump(InputAction.CallbackContext context)
     {
@@ -71,20 +108,24 @@ public class Player : MonoBehaviour
             {
                 rb.linearVelocity = new Vector2(rb.linearVelocityX, Data.jumpForce);
                 jumpsRemaining--;
+                animator.SetTrigger("jump");
             }
             else if (context.canceled)
             {
                 rb.linearVelocity = new Vector2(rb.linearVelocityX, rb.linearVelocityY * 0.1f);
                 jumpsRemaining--;
+                animator.SetTrigger("jump");
             }
         }
-         if (context.performed && wallJumpTimer > 0f)
+        if (context.performed && wallJumpTimer > 0f)
         {
             jumpsRemaining = 1;
             isWallJumping = true;
             rb.linearVelocity = new Vector2(wallJumpDirection * wallJumpPower.x, wallJumpPower.y);
             wallJumpTimer = 0;
             Invoke(nameof(CancelWallJump), wallJumpTime + 0.1f);
+            animator.SetTrigger("jump");
+
             //force a flip 
             if (transform.localScale.x != wallJumpDirection)
             {
@@ -173,5 +214,10 @@ public class Player : MonoBehaviour
         Gizmos.color = Color.blue;
         Gizmos.DrawWireCube(groundCheckPos.position, groundCheckSize); Gizmos.color = Color.blue;
         Gizmos.DrawWireCube(wallCheckPos.position, wallCheckSize);
+        Gizmos.color = Color.red;
+        if (isAttacking)
+        {
+            Gizmos.DrawWireSphere(attackZone.transform.position, attackZoneSize);
+        }
     }
 }

@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class Enemy : MonoBehaviour
+public class Enemy : BaseEnemy
 {
     [SerializeField] private LayerMask playerLayer;
 
@@ -18,13 +18,13 @@ public class Enemy : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+
         hit = Physics2D.Raycast(transform.position, patrolPoints[patroDestination].position, playerCheckRadius, playerLayer);
 
         foundPlayer = hit.collider != null;
         if (foundPlayer)
         {
             transform.position = Vector2.MoveTowards(transform.position, hit.transform.position, moveSpeed * Time.deltaTime);
-            //Debug.Log("found player");
         }
         else
         {
@@ -34,7 +34,6 @@ public class Enemy : MonoBehaviour
                 transform.position = Vector2.MoveTowards(transform.position, patrolPoints[patroDestination].position, moveSpeed * Time.deltaTime);
                 if (Vector2.Distance(transform.position, patrolPoints[patroDestination].position) < 0.2f)
                 {
-                    //Debug.Log("close");
                     patroDestination = 1;
                 }
             }
@@ -43,10 +42,19 @@ public class Enemy : MonoBehaviour
                 transform.position = Vector2.MoveTowards(transform.position, patrolPoints[patroDestination].position, moveSpeed * Time.deltaTime);
                 if (Vector2.Distance(transform.position, patrolPoints[patroDestination].position) < 0.2f)
                 {
-                    //Debug.Log("close");
                     patroDestination = 0;
                 }
             }
+
         }
+     
+    }
+    private void OnDrawGizmos()
+    {
+      /*  Gizmos.color = Color.blue;
+        Gizmos.draw(groundCheckPos.position, groundCheckSize); Gizmos.color = Color.blue;
+        Gizmos.DrawWireCube(wallCheckPos.position, wallCheckSize);
+        Gizmos.color = Color.red;*/
+      
     }
 }

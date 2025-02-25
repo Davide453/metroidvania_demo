@@ -522,7 +522,7 @@
             "id": "55f40246-707a-4d48-9112-52dcaf31ad05",
             "actions": [
                 {
-                    "name": "Fire",
+                    "name": "Attacks",
                     "type": "Button",
                     "id": "05156533-1e40-412f-9c66-9ff93a04c654",
                     "expectedControlType": "",
@@ -553,11 +553,11 @@
                 {
                     "name": "",
                     "id": "d4d81110-bf41-4329-b2ca-5a694edcbdd9",
-                    "path": "<Keyboard>/f",
+                    "path": "<Keyboard>/e",
                     "interactions": "",
                     "processors": "",
                     "groups": ";Keyboard&Mouse",
-                    "action": "Fire",
+                    "action": "Attacks",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },

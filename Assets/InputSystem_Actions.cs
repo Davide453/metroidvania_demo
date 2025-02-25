@@ -608,7 +608,7 @@ public partial class @PlayerInputAction: IInputActionCollection2, IDisposable
             ""id"": ""55f40246-707a-4d48-9112-52dcaf31ad05"",
             ""actions"": [
                 {
-                    ""name"": ""Fire"",
+                    ""name"": ""Attacks"",
                     ""type"": ""Button"",
                     ""id"": ""05156533-1e40-412f-9c66-9ff93a04c654"",
                     ""expectedControlType"": """",
@@ -639,11 +639,11 @@ public partial class @PlayerInputAction: IInputActionCollection2, IDisposable
                 {
                     ""name"": """",
                     ""id"": ""d4d81110-bf41-4329-b2ca-5a694edcbdd9"",
-                    ""path"": ""<Keyboard>/f"",
+                    ""path"": ""<Keyboard>/e"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": "";Keyboard&Mouse"",
-                    ""action"": ""Fire"",
+                    ""action"": ""Attacks"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 },
@@ -793,7 +793,7 @@ public partial class @PlayerInputAction: IInputActionCollection2, IDisposable
         m_UI_TrackedDeviceOrientation = m_UI.FindAction("TrackedDeviceOrientation", throwIfNotFound: true);
         // Player
         m_Player = asset.FindActionMap("Player", throwIfNotFound: true);
-        m_Player_Fire = m_Player.FindAction("Fire", throwIfNotFound: true);
+        m_Player_Attacks = m_Player.FindAction("Attacks", throwIfNotFound: true);
         m_Player_Move = m_Player.FindAction("Move", throwIfNotFound: true);
         m_Player_Jump = m_Player.FindAction("Jump", throwIfNotFound: true);
     }
@@ -1072,7 +1072,7 @@ public partial class @PlayerInputAction: IInputActionCollection2, IDisposable
     // Player
     private readonly InputActionMap m_Player;
     private List<IPlayerActions> m_PlayerActionsCallbackInterfaces = new List<IPlayerActions>();
-    private readonly InputAction m_Player_Fire;
+    private readonly InputAction m_Player_Attacks;
     private readonly InputAction m_Player_Move;
     private readonly InputAction m_Player_Jump;
     /// <summary>
@@ -1087,9 +1087,9 @@ public partial class @PlayerInputAction: IInputActionCollection2, IDisposable
         /// </summary>
         public PlayerActions(@PlayerInputAction wrapper) { m_Wrapper = wrapper; }
         /// <summary>
-        /// Provides access to the underlying input action "Player/Fire".
+        /// Provides access to the underlying input action "Player/Attacks".
         /// </summary>
-        public InputAction @Fire => m_Wrapper.m_Player_Fire;
+        public InputAction @Attacks => m_Wrapper.m_Player_Attacks;
         /// <summary>
         /// Provides access to the underlying input action "Player/Move".
         /// </summary>
@@ -1124,9 +1124,9 @@ public partial class @PlayerInputAction: IInputActionCollection2, IDisposable
         {
             if (instance == null || m_Wrapper.m_PlayerActionsCallbackInterfaces.Contains(instance)) return;
             m_Wrapper.m_PlayerActionsCallbackInterfaces.Add(instance);
-            @Fire.started += instance.OnFire;
-            @Fire.performed += instance.OnFire;
-            @Fire.canceled += instance.OnFire;
+            @Attacks.started += instance.OnAttacks;
+            @Attacks.performed += instance.OnAttacks;
+            @Attacks.canceled += instance.OnAttacks;
             @Move.started += instance.OnMove;
             @Move.performed += instance.OnMove;
             @Move.canceled += instance.OnMove;
@@ -1144,9 +1144,9 @@ public partial class @PlayerInputAction: IInputActionCollection2, IDisposable
         /// <seealso cref="PlayerActions" />
         private void UnregisterCallbacks(IPlayerActions instance)
         {
-            @Fire.started -= instance.OnFire;
-            @Fire.performed -= instance.OnFire;
-            @Fire.canceled -= instance.OnFire;
+            @Attacks.started -= instance.OnAttacks;
+            @Attacks.performed -= instance.OnAttacks;
+            @Attacks.canceled -= instance.OnAttacks;
             @Move.started -= instance.OnMove;
             @Move.performed -= instance.OnMove;
             @Move.canceled -= instance.OnMove;
@@ -1337,12 +1337,12 @@ public partial class @PlayerInputAction: IInputActionCollection2, IDisposable
     public interface IPlayerActions
     {
         /// <summary>
-        /// Method invoked when associated input action "Fire" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// Method invoked when associated input action "Attacks" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>
         /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
-        void OnFire(InputAction.CallbackContext context);
+        void OnAttacks(InputAction.CallbackContext context);
         /// <summary>
         /// Method invoked when associated input action "Move" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>
