@@ -1,15 +1,20 @@
 using System.Runtime.Serialization;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using System.Collections;
 
-public class Player : MonoBehaviour
+public class Player : MonoBehaviour, IDamageable
 {
     public Animator animator;
     public PlayerDataNew Data;
     private float horizontalMovement;
     private float verticalMovement;
-    bool isFacingRIght = true;
+    bool isFacingRight = true;
 
+
+    [Header("Health")]
+    public float MaxHealth { get; set; } = 5f;
+    public float CurrentHealth { get; set; }
     #region Variables
     //Components
     public Rigidbody2D rb;
@@ -17,6 +22,13 @@ public class Player : MonoBehaviour
     public int maxJumps = 2;
     private int jumpsRemaining;
     private bool isGrounded;
+    [Header("Dash")]
+    public float dashSpeed = 20f;
+    public float dashDuration = 0.2f;
+    public float dashCooldown = 1f;
+    private float lastDashTime;
+    private bool isDashing = false;
+    private bool canDash = true;
     [Header("Gravity")]
     public float baseGravity = 3.5f;
     public float maxFallSpeed = 18f;
@@ -42,30 +54,45 @@ public class Player : MonoBehaviour
     [Header("Attacks")]
     public float damage = 1;
     private bool isAttacking;
-    public GameObject attackZone;
+    public GameObject[] attacksPos;//right =0; down=1; up=2
+    private int _attackIndex;
     public float attackZoneSize = 0.5f;
     public LayerMask enemyLayer;
+
+    private Knockback knockback;
     #endregion
 
     private void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
+        knockback = GetComponent<Knockback>();
     }
-
+    private void Start()
+    {
+        CurrentHealth = MaxHealth;
+        PlayerManager.instance.IncrementHealth(MaxHealth);
+    }
     private void Update()
     {
-        GroundCheck();
-        Gravity();
-        ProcessWallSlide();
-        ProcessWallJump();
-        if (!isWallJumping)
+        if (!isDashing)
         {
-            rb.linearVelocity = new Vector2(horizontalMovement * Data.speed, rb.linearVelocityY);
-            Flip();
+            GroundCheck();
+            Gravity();
+            ProcessWallSlide();
+            ProcessWallJump();
+            if (!isWallJumping)
+            {
+                if (!knockback.isBeingKnockback)
+                {
+                    //rb.linearVelocity = new Vector2(horizontalMovement * Data.speed, rb.linearVelocityY);
+                    rb.linearVelocityX = horizontalMovement * Data.speed;
+                }
+                Flip();
+            }
+            animator.SetFloat("yVelocity", rb.linearVelocityY);
+            animator.SetFloat("magnitude", rb.linearVelocity.magnitude);
+            animator.SetBool("isWallSliding", isWallSliding);
         }
-        animator.SetFloat("yVelocity", rb.linearVelocityY);
-        animator.SetFloat("magnitude", rb.linearVelocity.magnitude);
-        animator.SetBool("isWallSliding", isWallSliding);
 
     }
     public void Move(InputAction.CallbackContext context)
@@ -78,41 +105,104 @@ public class Player : MonoBehaviour
         {
             isAttacking = true;
             animator.SetBool("isAttacking", isAttacking);
-            attackZone.SetActive(true);
+            attacksPos[_attackIndex].SetActive(true);
 
-            Collider2D[] hits = Physics2D.OverlapCircleAll(attackZone.transform.position, attackZoneSize, enemyLayer);
-            Debug.Log(hits.ToString());
-
+            Collider2D[] hits = Physics2D.OverlapCircleAll(attacksPos[_attackIndex].transform.position, attackZoneSize, enemyLayer);
             foreach (Collider2D hit in hits)
             {
-                hit.GetComponent<IDamageable>().Damage(damage);
-
+                hit.GetComponent<IDamageable>().Damage(damage, transform.right);
             }
-            //Vector2 knockbackDirection = (hits[0].transform.position - transform.position).normalized;
-            Vector2 knockbackDirection = new Vector2(horizontalMovement * -1 * 1000000f * Time.deltaTime, 0);
-            rb.AddForce(knockbackDirection, ForceMode2D.Impulse);
+            if (hits.Length > 0)
+            {
+                knockback.CallKnockbackRoutine(Vector2.left, Vector2.zero, horizontalMovement);
+            }
         }
     }
     public void CancelAttack()
     {
         isAttacking = false;
         animator.SetBool("isAttacking", isAttacking);
-        attackZone.SetActive(false);
+        foreach (GameObject attackPos in attacksPos)
+        {
+            attackPos.SetActive(false);
+        }
+        _attackIndex = 0;
+    }
+    public void UpAttack(InputAction.CallbackContext context)
+    {
+        if (context.started && transform.position.y > 0)
+        {
+            _attackIndex = 2;
+
+        }
+        else if (context.canceled)
+        {
+            _attackIndex = 0;
+        }
+
+    }
+    public void DownAttack(InputAction.CallbackContext context)
+    {
+        if (context.started)
+        {
+            _attackIndex = 1;
+        }
+        else if (context.canceled)
+        {
+            _attackIndex = 0;
+        }
+
+    }
+    public void OnDash(InputAction.CallbackContext context)
+    {
+        if (context.performed && canDash)
+        {
+            canDash = false;
+            StartCoroutine(Dash());
+        }
+    }
+    public IEnumerator Dash()
+    {
+
+        isDashing = true;
+        lastDashTime = 0;
+        int dashDirection;
+        rb.gravityScale = 0;
+        if (isFacingRight)
+        {
+            dashDirection = 1;
+        }
+        else
+        {
+            dashDirection = -1;
+        }
+
+
+        rb.linearVelocity = new Vector2(dashDirection * dashSpeed, 0);
+        yield return new WaitForSeconds(dashDuration);
+        rb.linearVelocity = Vector2.zero;
+        isDashing = false;
+        rb.gravityScale = baseGravity;
+        yield return new WaitForSeconds(dashCooldown);
+        canDash = true;
 
     }
     public void Jump(InputAction.CallbackContext context)
     {
-        if (jumpsRemaining > 0 && !isWallSliding)
+        if (jumpsRemaining > 0 && !isWallSliding && !isDashing)
         {
             if (context.performed)
             {
-                rb.linearVelocity = new Vector2(rb.linearVelocityX, Data.jumpForce);
+                //rb.linearVelocity = new Vector2(rb.linearVelocityX, Data.jumpForce);
+                rb.linearVelocityY = Data.jumpForce;
                 jumpsRemaining--;
                 animator.SetTrigger("jump");
             }
             else if (context.canceled)
             {
-                rb.linearVelocity = new Vector2(rb.linearVelocityX, rb.linearVelocityY * 0.1f);
+                //rb.linearVelocity = new Vector2(rb.linearVelocityX, rb.linearVelocityY * 0.1f);
+                rb.linearVelocityY = Data.jumpForce * 0.1f;
+
                 jumpsRemaining--;
                 animator.SetTrigger("jump");
             }
@@ -129,7 +219,7 @@ public class Player : MonoBehaviour
             //force a flip 
             if (transform.localScale.x != wallJumpDirection)
             {
-                isFacingRIght = !isFacingRIght;
+                isFacingRight = !isFacingRight;
                 Vector3 ls = transform.localScale;
                 ls.x *= -1f;
                 transform.localScale = ls;
@@ -200,9 +290,9 @@ public class Player : MonoBehaviour
     }
     private void Flip()
     {
-        if (isFacingRIght && horizontalMovement < 0 || !isFacingRIght && horizontalMovement > 0)
+        if (isFacingRight && horizontalMovement < 0 || !isFacingRight && horizontalMovement > 0)
         {
-            isFacingRIght = !isFacingRIght;
+            isFacingRight = !isFacingRight;
             Vector3 ls = transform.localScale;
             ls.x *= -1f;
             transform.localScale = ls;
@@ -212,12 +302,29 @@ public class Player : MonoBehaviour
     private void OnDrawGizmos()
     {
         Gizmos.color = Color.blue;
-        Gizmos.DrawWireCube(groundCheckPos.position, groundCheckSize); Gizmos.color = Color.blue;
+        Gizmos.DrawWireCube(groundCheckPos.position, groundCheckSize);
         Gizmos.DrawWireCube(wallCheckPos.position, wallCheckSize);
         Gizmos.color = Color.red;
         if (isAttacking)
         {
-            Gizmos.DrawWireSphere(attackZone.transform.position, attackZoneSize);
+            Gizmos.DrawWireSphere(attacksPos[_attackIndex].transform.position, attackZoneSize);
         }
+    }
+
+    public void Damage(float damageAmount, Vector2 hitDirection)
+    {
+        CurrentHealth -= damageAmount;
+        PlayerManager.instance.RemoveHealth(damageAmount);
+        Debug.Log(damageAmount);
+        if (CurrentHealth <= 0)
+        {
+            gameObject.SetActive(false);
+        }
+        knockback.CallKnockbackRoutine(hitDirection, Vector2.zero, horizontalMovement);
+    }
+
+    public void Die()
+    {
+        Destroy(gameObject);
     }
 }

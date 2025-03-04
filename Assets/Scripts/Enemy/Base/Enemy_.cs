@@ -2,16 +2,19 @@ using UnityEngine;
 
 public class Enemy_ : MonoBehaviour, IDamageable, IEnemyMovable, ITriggerCheckable
 {
-    public float MaxHealth { get; set; }
+    #region Stats
+    public virtual float MaxHealth { get; set; }
     public float CurrentHealth { get; set; }
-    public Rigidbody2D rb { get; set; }
+    public bool IsAggroed { get; set; }
+    public bool IsWithinStrikingDistance { get; set; }
     public bool isFacingRight { get; set; }
+    #endregion
+
+    public Rigidbody2D rb { get; set; }
     public EnemyStateMachine StateMachine { get; set; }
     public EnemyIdleState IdleState { get; set; }
     public EnemyChaseState ChaseState { get; set; }
     public EnemyAttackState AttackState { get; set; }
-    public bool IsAggroed { get; set; }
-    public bool IsWithinStrikingDistance { get; set; }
 
 
 
@@ -33,7 +36,7 @@ public class Enemy_ : MonoBehaviour, IDamageable, IEnemyMovable, ITriggerCheckab
         EnemyAttackInstance = Instantiate(EnemyAttackBase);
 
         StateMachine = new EnemyStateMachine();
-        
+
         IdleState = new EnemyIdleState(this, StateMachine);
         ChaseState = new EnemyChaseState(this, StateMachine);
         AttackState = new EnemyAttackState(this, StateMachine);
@@ -43,7 +46,7 @@ public class Enemy_ : MonoBehaviour, IDamageable, IEnemyMovable, ITriggerCheckab
         CurrentHealth = MaxHealth;
         rb = GetComponent<Rigidbody2D>();
 
-        EnemyIdleInstance.Initialize(gameObject,this);
+        EnemyIdleInstance.Initialize(gameObject, this);
         EnemyChaseInstance.Initialize(gameObject, this);
         EnemyAttackInstance.Initialize(gameObject, this);
 
@@ -53,6 +56,10 @@ public class Enemy_ : MonoBehaviour, IDamageable, IEnemyMovable, ITriggerCheckab
     private void Update()
     {
         StateMachine.CurrentEnemyState.FrameUpdate();
+        if (CurrentHealth <= 0)
+        {
+            Die();
+        }
     }
     private void FixedUpdate()
     {
@@ -63,7 +70,7 @@ public class Enemy_ : MonoBehaviour, IDamageable, IEnemyMovable, ITriggerCheckab
 
     }
 
-    public void Damage(float damageAmount)
+    public void Damage(float damageAmount, Vector2 pos)
     {
         CurrentHealth -= damageAmount;
     }

@@ -9,7 +9,8 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2aad14cfa3f403e479cf76a07877db22, type: 3}
-  m_Name: Chase-Run Away
+  m_Script: {fileID: 11500000, guid: 323dbc80d500cfc4d9c1c30e74bdaa6e, type: 3}
+  m_Name: Idle-Fly Random Wander
   m_EditorClassIdentifier: 
-  movementSpeed: 6
+  RandomMovementRange: 5
+  RandomMovementSpeed: 1

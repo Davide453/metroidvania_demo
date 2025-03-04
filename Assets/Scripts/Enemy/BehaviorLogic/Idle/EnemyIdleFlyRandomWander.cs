@@ -1,7 +1,7 @@
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "Idle-Random Wander", menuName = "Enemy Logic/Idle logic/Random Wander")]
-public class EnemyIdleRandomWander : EnemyIdleSOBase
+public class EnemyIdleFlyRandomWander : EnemyIdleSOBase
 {
     [SerializeField] private float RandomMovementRange = 5f;
     [SerializeField] private float RandomMovementSpeed = 1f;

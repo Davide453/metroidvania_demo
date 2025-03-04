@@ -6,7 +6,7 @@ public class BaseEnemy : MonoBehaviour, IDamageable
     public float MaxHealth { get; set; } = 5;
     public float CurrentHealth { get; set; }
 
-    public void Damage(float damageAmount)
+    public void Damage(float damageAmount, Vector2 pos)
     {
         CurrentHealth -= damageAmount;
         Debug.Log(CurrentHealth);
