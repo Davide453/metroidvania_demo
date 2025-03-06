@@ -2,6 +2,8 @@ using System.Runtime.Serialization;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using System.Collections;
+using System;
+using static UnityEditor.Experimental.GraphView.GraphView;
 
 public class Player : MonoBehaviour, IDamageable
 {
@@ -54,10 +56,11 @@ public class Player : MonoBehaviour, IDamageable
     [Header("Attacks")]
     public float damage = 1;
     private bool isAttacking;
+    public float attackZoneSize = 0.5f;
+    [SerializeField] private LayerMask enemyLayer;
     public GameObject[] attacksPos;//right =0; down=1; up=2
     private int _attackIndex;
-    public float attackZoneSize = 0.5f;
-    public LayerMask enemyLayer;
+
 
     private Knockback knockback;
     #endregion
@@ -110,7 +113,7 @@ public class Player : MonoBehaviour, IDamageable
             Collider2D[] hits = Physics2D.OverlapCircleAll(attacksPos[_attackIndex].transform.position, attackZoneSize, enemyLayer);
             foreach (Collider2D hit in hits)
             {
-                hit.GetComponent<IDamageable>().Damage(damage, transform.right);
+                hit.gameObject.GetComponent<IDamageable>().Damage(damage, transform.right);
             }
             if (hits.Length > 0)
             {
@@ -315,7 +318,6 @@ public class Player : MonoBehaviour, IDamageable
     {
         CurrentHealth -= damageAmount;
         PlayerManager.instance.RemoveHealth(damageAmount);
-        Debug.Log(damageAmount);
         if (CurrentHealth <= 0)
         {
             gameObject.SetActive(false);
@@ -326,5 +328,11 @@ public class Player : MonoBehaviour, IDamageable
     public void Die()
     {
         Destroy(gameObject);
+    }
+
+    internal void IncrementMaxHealth()
+    {
+        MaxHealth = +1;
+        PlayerManager.instance.IncrementHealth(MaxHealth);
     }
 }

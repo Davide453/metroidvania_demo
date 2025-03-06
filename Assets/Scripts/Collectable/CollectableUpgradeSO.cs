@@ -24,6 +24,7 @@ public class CollectableUpgradeSO : CollectableSOBase
 
     public override void Collect(GameObject objectThatCollected)
     {
+        GivePowerUp(objectThatCollected);
     }
 
 
@@ -33,6 +34,8 @@ public class CollectableUpgradeSO : CollectableSOBase
         {
             _playerUpgrades = FinderHelper.GetComponentOnObject<PlayerUpgrades>(objectThatCollected);
         }
+        Debug.Log(objectThatCollected.ToString());
+
         switch (_upgradeToGivePlayer)
         {
             case UpgradeToGivePlayer.AttackUp:
@@ -42,7 +45,9 @@ public class CollectableUpgradeSO : CollectableSOBase
                 GiveDash();
                 break;
             case UpgradeToGivePlayer.HealthUp:
-                GiveHealthUp();
+                Debug.Log(_upgradeToGivePlayer);
+
+                GiveMaxHealthUp();
                 break;
             case UpgradeToGivePlayer.Swim:
                 GiveSwim();
@@ -55,9 +60,10 @@ public class CollectableUpgradeSO : CollectableSOBase
         _playerUpgrades.UnlockSwim();
     }
 
-    private void GiveHealthUp()
+    private void GiveMaxHealthUp()
     {
-        throw new NotImplementedException();
+
+        _playerUpgrades.MaxHealthUp();
     }
 
     private void GiveDash()
